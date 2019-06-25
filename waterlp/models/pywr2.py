@@ -45,6 +45,7 @@ oa_type_to_pywr = {
     'Diversion Reservoir': 'Link',
     'Hydropower': 'Hydropower',
     'Flow Requirement': 'InstreamFlowRequirement',
+    'Flood Control': 'InstreamFlowRequirement',
     'River': 'River',
     'Conveyance': 'Link',
     'Streamflow Gauge': 'RiverGauge',
