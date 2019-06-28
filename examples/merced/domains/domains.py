@@ -194,3 +194,49 @@ class Hydropower(RiverDomainMixin, PiecewiseLink):
         del (data["type"])
         node = cls(model, base_flow=base_flow, base_cost=base_cost, excess_cost=excess_cost, **data)
         return node
+
+
+class PiecewiseHydropower(Domain, PiecewiseLink):
+    """A river gauging station, with a minimum residual flow (MRF)
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialise a new Hydropower instance
+        Parameters
+        ----------
+        """
+        kwargs['max_flow'] = kwargs.pop('max_flow', [None])
+        kwargs['cost'] = kwargs.pop('cost', [0.0])
+        super(PiecewiseHydropower, self).__init__(*args, **kwargs)
+
+    def max_flow():
+        def fget(self):
+            return [self.sublinks[i].max_flow for i in self.sublinks]
+
+        def fset(self, value):
+            for i, v in enumerate(value):
+                self.sublinks[i].max_flow = v
+
+        return locals()
+
+    max_flow = property(**max_flow())
+
+    def cost():
+        def fget(self):
+            return [self.sublinks[i].cost for i in self.sublinks]
+
+        def fset(self, value):
+            for i, v in enumerate(value):
+                self.sublinks[i].cost = v
+
+        return locals()
+
+    cost = property(**cost())
+
+    @classmethod
+    def load(cls, data, model):
+        max_flow = load_parameter(model, data.pop("max_flow", [None]))
+        cost = load_parameter(model, data.pop("cost", [0.0]))
+        del (data["type"])
+        node = cls(model, max_flow=max_flow, cost=cost, **data)
+        return node
