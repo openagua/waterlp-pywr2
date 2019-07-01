@@ -11,11 +11,8 @@ import pandas as pd
 from waterlp.celery_app import app
 from celery.exceptions import Ignore
 
-from waterlp.reporters.redis import local_redis
 from waterlp.reporters.post import Reporter as PostReporter
-# from waterlp.reporters.ably import AblyReporter
 from waterlp.reporters.pubnub import PubNubReporter
-from waterlp.reporters.socketio import SocketIOReporter
 from waterlp.logger import RunLogger
 from waterlp.parser import commandline_parser
 from waterlp.connection import connection
@@ -299,11 +296,13 @@ def run_scenario(supersubscenario, args, verbose=False):
     elif args.message_protocol == 'post':
         post_reporter.is_main_reporter = True
         reporter = post_reporter
-    # elif args.message_protocol == 'ably':
-    #     reporter = AblyReporter(args, post_reporter=post_reporter)
+    elif args.message_protocol == 'ably':
+        from waterlp.reporters.ably import AblyReporter
+        reporter = AblyReporter(args, post_reporter=post_reporter)
     elif args.message_protocol == 'pubnub':
         reporter = PubNubReporter(args, publish_key=args.publish_key, post_reporter=post_reporter, run_id=args.run_id)
     elif args.message_protocol == 'socketio':
+        from waterlp.reporters.socketio import SocketIOReporter
         reporter = SocketIOReporter(args, publish_key=args.publish_key, post_reporter=post_reporter, run_id=args.run_id)
     if reporter:
         reporter.updater = system.scenario.update_payload
