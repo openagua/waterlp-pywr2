@@ -21,6 +21,8 @@ from waterlp.models.system import WaterSystem
 from waterlp.scenario_class import Scenario
 from waterlp.utils.application import ProcessState
 
+from waterlp.reporters.redis import local_redis
+
 from pathlib import Path
 
 home = str(Path.home())
