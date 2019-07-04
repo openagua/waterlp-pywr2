@@ -196,7 +196,7 @@ class Hydropower(RiverDomainMixin, PiecewiseLink):
         return node
 
 
-class PiecewiseHydropower(Domain, PiecewiseLink):
+class PiecewiseHydropower(RiverDomainMixin, PiecewiseLink):
     """A river gauging station, with a minimum residual flow (MRF)
     """
 

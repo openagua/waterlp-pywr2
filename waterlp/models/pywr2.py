@@ -9,10 +9,11 @@ import pandas
 
 from pywr.core import Model
 
-from .utils import resource_name, clean_parameter_name, create_policy, create_variable, create_control_curve
+from .utils import resource_name, create_policy, create_variable, create_control_curve
 
 oa_attr_to_pywr = {
-    'water demand': 'base_flow',
+    'water demand': 'max_flow',
+    # 'maximum flow': 'max_flow',
     'runoff': 'flow',
     'violation cost': 'mrf_cost',
     'requirement': 'mrf',
@@ -44,7 +45,8 @@ oa_type_to_pywr = {
     'Catchment': 'Catchment',
     'Diversion Reservoir': 'Link',
     'Hydropower': 'Hydropower',
-    'Flow Requirement': 'InstreamFlowRequirement',
+    'Hydropower (Piecewise)': 'PiecewiseLink',
+    'Instream Flow Requirement': 'InstreamFlowRequirement',
     'Flood Control': 'InstreamFlowRequirement',
     'River': 'River',
     'Conveyance': 'Link',
@@ -55,7 +57,7 @@ oa_type_to_pywr = {
 pywr_storage_types = ['Storage']
 pywr_output_types = ['Output']
 pywr_input_types = ['Input', 'Catchment']
-pywr_node_types = ['Hydropower', 'InstreamFlowRequirement']
+pywr_node_types = ['Hydropower', 'PiecewiseLink', 'InstreamFlowRequirement']
 pywr_link_types = ['Link', 'River']
 
 recorders = {
@@ -187,8 +189,11 @@ class PywrModel(object):
         for name, package in modules:
             try:
                 import_module(name, package)
-            except:
+            except Exception as err:
                 print(' [-] WARNING: {} could not be imported from {}'.format(name, package))
+                print('     Here\'s the real error:')
+                print(type(err))
+                print(err)
 
         # Step 2: Load and run model
         self.model = Model.load(model_path, path=model_path)
