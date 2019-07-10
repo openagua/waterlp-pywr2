@@ -2326,11 +2326,12 @@ def convert(value, unit_in, unit_out, scale_in=1, scale_out=1):
     try:
         u1 = units[unit_in]
         u2 = units[unit_out]
+        tempval = 0
 
         if u1['dim'] != u2['dim']:
             raise Exception("Input dimension {} is different than output dimension {}.".format(u1['dim'], u2['dim']))
 
-        return value * scale_in * u1['lf'] / u2['lf'] / scale_out
+        return float(value) * float(scale_in) * float(u1['lf']) / float(u2['lf']) / float(scale_out)
 
     except:
         err_unit = None
