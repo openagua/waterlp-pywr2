@@ -53,16 +53,16 @@
       "name": "Donnells PH [node]",
       "type": "PiecewiseLink",
       "max_flows": [
-        10,
-        10,
-        10,
-        10
+        428112.0,
+        428112.0,
+        428112.0,
+        428112.0
       ],
       "costs": [
-        -147.83237307082567,
-        -135.33218508779214,
-        -122.83199710475861,
-        -110.33180912172509
+        -189.33452190627276,
+        -168.61557573290315,
+        -147.89662955953355,
+        -127.17768338616396
       ]
     },
     {
@@ -159,7 +159,10 @@
     },
     "node/Donnells PH/Water Demand": {
       "type": "constant",
-      "values" : [10]
+      "values": [
+        10
+      ],
+      "value": 428112.0
     },
     "node/Donnells Reservoir/Storage Capacity": {
       "type": "constant",

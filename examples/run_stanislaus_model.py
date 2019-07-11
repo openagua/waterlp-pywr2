@@ -19,12 +19,11 @@ def get_cost(timestep, energy_data):
     d = maxVal - minVal
     return [-(maxVal - d / 8), -(maxVal - 3 * d / 8), -(maxVal - 5 * d / 8), -(maxVal - 7 * d / 8)]
 
-def get_demand(timestep, data):
+def convert_demand(data):
     # Modify this function to return the correct values
-    kwargs = dict(timestep=timestep)
-    TC = pd.GET("node/Donnells PH/Turbine Capacity", **kwargs)
-    qDemand = TC * 3600 * 6
-    return [qDemand, qDemand, qDemand, qDemand]
+    TC = data/4
+    TC = TC * 60*60*24
+    return [TC, TC, TC, TC]
 
 def load_model(root_dir, model_path, bucket=None, network_key=None, check_graph=False):
     os.chdir(root_dir)
@@ -84,8 +83,10 @@ for step in tqdm(timesteps, ncols=80):
         with open(model_path, "r") as f:
             data = json.load(f)
 
+        tc_values = data["parameters"]["node/Donnells PH/Turbine Capacity"]["value"]
         data['nodes'][9]['costs'] = get_cost(step+1, energy_data)
-        data["parameters"]["node/Donnells PH/Water Demand"]["values"] = [10]
+        data['nodes'][9]['max_flows'] = convert_demand(tc_values)
+        data["parameters"]["node/Donnells PH/Water Demand"]["value"] = convert_demand(tc_values)[0]
 
         with open(model_path, 'w') as f:
             json.dump(data, f, indent=2)
