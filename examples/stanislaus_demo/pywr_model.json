@@ -53,10 +53,10 @@
       "name": "Donnells PH [node]",
       "type": "PiecewiseLink",
       "max_flows": [
-        428112.0,
-        428112.0,
-        428112.0,
-        428112.0
+        0.428112,
+        0.428112,
+        0.428112,
+        0.428112
       ],
       "costs": [
         -189.33452190627276,
@@ -68,7 +68,7 @@
     {
       "name": "Donnells Reservoir [node]",
       "type": "Storage",
-      "initial_volume": 38.3,
+      "initial_volume": 67,
       "max_volume": "node/Donnells Reservoir/Storage Capacity",
       "min_volume": "node/Donnells Reservoir/Inactive Pool"
     },
@@ -159,10 +159,7 @@
     },
     "node/Donnells PH/Water Demand": {
       "type": "constant",
-      "values": [
-        10
-      ],
-      "value": 428112.0
+      "value": 1.712448
     },
     "node/Donnells Reservoir/Storage Capacity": {
       "type": "constant",
@@ -177,11 +174,11 @@
     },
     "node/STANI-N-INS1/Violation Cost": {
       "type": "constant",
-      "value": 10
+      "value": 300
     },
     "node/STANI-N-INS1/Requirement": {
       "type": "constant",
-      "value": 1
+      "value": 0.05
     },
     "node/STN_1 Headflow/Runoff": {
       "type": "node_STN_1_Headflow_Runoff"
