@@ -9,21 +9,6 @@ import matplotlib.pyplot as plt
 from stanislaus_demo.parameters import WaterLPParameter
 from stanislaus_demo.utilities.converter import convert
 
-def get_cost(timestep, energy_data):
-    x = 100  # Value to be adjusted
-    totDemand = float(energy_data['TotDemand'][timestep])
-    maxDemand = float(energy_data['MaxDemand'][timestep])
-    minDemand = float(energy_data['MinDemand'][timestep])
-    minVal = x * (totDemand / 768)  # 768 GWh is median daily energy demand for 2009
-    maxVal = minVal * (maxDemand / minDemand)
-    d = maxVal - minVal
-    return [-(maxVal - d / 8), -(maxVal - 3 * d / 8), -(maxVal - 5 * d / 8), -(maxVal - 7 * d / 8)]
-
-def convert_demand(data):
-    # Modify this function to return the correct values
-    TC = data/4000000
-    TC = TC * 60 * 60 * 24
-    return [TC, TC, TC, TC]
 
 def load_model(root_dir, model_path, bucket=None, network_key=None, check_graph=False):
     os.chdir(root_dir)
@@ -80,16 +65,6 @@ energy_data = pd.read_csv(path, usecols=[0,1,2,3], index_col=0, header=None, nam
 
 for step in tqdm(timesteps, ncols=80):
     try:
-        with open(model_path, "r") as f:
-            data = json.load(f)
-
-        tc_values = data["parameters"]["node/Donnells PH/Turbine Capacity"]["value"]
-        data['nodes'][9]['costs'] = get_cost(step+1, energy_data)
-        data['nodes'][9]['max_flows'] = convert_demand(tc_values)
-        data["parameters"]["node/Donnells PH/Water Demand"]["value"] = sum(convert_demand(tc_values))
-
-        with open(model_path, 'w') as f:
-            json.dump(data, f, indent=2)
         model.step()
     except Exception as err:
         print('Failed at step {}'.format(model.timestepper.current))
