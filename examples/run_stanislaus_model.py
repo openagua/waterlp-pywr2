@@ -86,7 +86,7 @@ for step in tqdm(timesteps, ncols=80):
         tc_values = data["parameters"]["node/Donnells PH/Turbine Capacity"]["value"]
         data['nodes'][9]['costs'] = get_cost(step+1, energy_data)
         data['nodes'][9]['max_flows'] = convert_demand(tc_values)
-        data["parameters"]["node/Donnells PH/Water Demand"]["value"] = convert_demand(tc_values)[0]
+        data["parameters"]["node/Donnells PH/Water Demand"]["value"] = sum(convert_demand(tc_values))
 
         with open(model_path, 'w') as f:
             json.dump(data, f, indent=2)

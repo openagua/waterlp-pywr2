@@ -57,10 +57,10 @@ class InstreamFlowRequirement(RiverDomainMixin, PiecewiseLink):
 
     def unconstrained_cost():
         def fget(self):
-            return self.sublinks[0].cost
+            return self.sublinks[1].cost
 
         def fset(self, value):
-            self.sublinks[0].cost = value
+            self.sublinks[1].cost = value
 
         return locals()
 
