@@ -43,8 +43,9 @@ oa_type_to_pywr = {
     'Misc Source': 'Catchment',
     'Catchment': 'Catchment',
     'Diversion Reservoir': 'Link',
+    'Flood Control': 'Link',
     'Hydropower': 'Hydropower',
-    'Flow Requirement': 'InstreamFlowRequirement',
+    'Instream Flow Requirement': 'InstreamFlowRequirement',
     'River': 'River',
     'Conveyance': 'Link',
     'Streamflow Gauge': 'RiverGauge',
@@ -55,7 +56,6 @@ pywr_storage_types = ['Storage']
 pywr_output_types = ['Output']
 pywr_input_types = ['Input', 'Catchment']
 pywr_node_types = ['Hydropower', 'InstreamFlowRequirement']
-pywr_link_types = ['Link', 'River']
 
 recorders = {
     'storage': 'NumpyArrayStorageRecorder',

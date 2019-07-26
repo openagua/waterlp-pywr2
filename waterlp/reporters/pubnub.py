@@ -29,6 +29,8 @@ class PubNubReporter(object):
 
         subscribe_key = environ.get('PUBNUB_SUBSCRIBE_KEY')
 
+        publish_key = publish_key or environ.get('PUBNUB_PUBLISH_KEY')
+
         if publish_key and subscribe_key:
             pnconfig = PNConfiguration()
             pnconfig.subscribe_key = subscribe_key
