@@ -203,7 +203,8 @@ class PywrModel(object):
 
         return
 
-    def create_model(self, network, template, start=None, end=None, step=None, initial_volumes=None, filename=None, human_readable=False,
+    def create_model(self, network, template, start=None, end=None, step=None, initial_volumes=None, filename=None,
+                     human_readable=False,
                      metadata=None, tattrs=None, **kwargs):
 
         constants = kwargs.get('constants', {})
@@ -396,11 +397,11 @@ class PywrModel(object):
                 }
 
                 if node_1_id in output_ids:
-                    msg = 'Topology error: Output "{}" appears to be upstream of "{}"'\
+                    msg = 'Topology error: Output "{}" appears to be upstream of "{}"' \
                         .format(node_1['pywr_name'], pywr_name)
                     raise Exception(msg)
                 elif node_2_id in input_ids:
-                    msg = 'Topology error: Input "{}" appears to be downstream of "{}"'\
+                    msg = 'Topology error: Input "{}" appears to be downstream of "{}"' \
                         .format(node_2['pywr_name'], pywr_name)
                     raise Exception(msg)
 
@@ -502,16 +503,57 @@ class PywrModel(object):
             #     down_edge.append(link['to_slot'])
             pywr_edges.extend([up_edge, down_edge])
 
-        # Finally, map network attributes to parameters
+        # Map network attributes to parameters
         for ra in network['attributes']:
             process_param({}, 'network', network, ra)
 
+        # Cleanup model by removing nodes that don't have any attributes (cost, etc.)
+        up_nodes = {}
+        down_nodes = {}
+        for up_node, down_node in pywr_edges:
+            up_nodes[down_node] = up_nodes.get(down_node, []) + [up_node]
+            down_nodes[up_node] = down_nodes.get(up_node, []) + [down_node]
+
+        pywr_nodes_filtered = []
+        obsolete_edges = []
+        new_edges = {}
+        for node in pywr_nodes:
+            if len(node.keys()) > 2 \
+                    or len(up_nodes.get(node['name'], [])) != 1 \
+                    or len(down_nodes.get(node['name'], [])) != 1:
+                # add to filtered list
+                pywr_nodes_filtered.append(node)
+            else:
+                # remove from edges & combine edges
+                up_node = up_nodes.get(node['name'])[0]
+                down_node = down_nodes.get(node['name'])[0]
+                if up_node and down_node:
+                    obsolete_edges.extend([(up_node, node['name']), (node['name'], down_node)])
+                    new_edges[node['name']] = [up_node, down_node]
+
+        filtered_names = [n['name'] for n in pywr_nodes_filtered]
+        pywr_edges_updated = []
+        new_edges_tuples = []
+        for up_node, down_node in pywr_edges:
+            if (up_node, down_node) not in obsolete_edges:
+                pywr_edges_updated.append([up_node, down_node])
+            else:
+                new_edge = new_edges.get(up_node, []) + new_edges.get(down_node, [])
+                new_edge = [n for n in new_edge if n in filtered_names]
+                if len(new_edge) < 2:
+                    continue
+                new_edge_tuple = (new_edge[0], new_edge[-1])
+                if new_edge_tuple not in new_edges_tuples:
+                    new_edges_tuples.append(new_edge_tuple)
+                    pywr_edges_updated.append(list(new_edge_tuple))
+
+        # Finally, create Pywr model
         pywr_model = {
             'metadata': metadata,
             'timestepper': timestepper,
             'solver': {'name': 'glpk'},
-            'nodes': pywr_nodes,
-            'edges': pywr_edges,
+            'nodes': pywr_nodes_filtered,
+            'edges': pywr_edges_updated,
             'parameters': pywr_params,
             'recorders': pywr_recorders
         }
