@@ -388,7 +388,7 @@ class WaterSystem(object):
                 try:
                     value = float(value)
                 except:
-                    raise Exception("Could not convert scalar")
+                    raise Exception("Could not convert scalar for {}".format(res_attr_name))
 
             if (type_name.lower(), tattr['attr_name']) in INITIAL_STORAGE_ATTRS:
                 self.initial_volumes[idx] = value
