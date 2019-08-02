@@ -182,8 +182,14 @@ class PywrModel(object):
             link_id = link['id']
             node_1_id = link['node_1_id']
             node_2_id = link['node_2_id']
-            node_lookup[node_1_id]['connect_out'] += 1
-            node_lookup[node_2_id]['connect_in'] += 1
+            try:
+                node_lookup[node_1_id]['connect_out'] += 1
+            except:
+                raise Exception('Topology error for {}. Upstream node ID {} not found.'.format(name, node_1_id))
+            try:
+                node_lookup[node_2_id]['connect_in'] += 1
+            except:
+                raise Exception('Topology error for {}. Downstream node ID {} not found.'.format(name, node_2_id))
             link_lookup[link_id] = {
                 'name': name,
                 'type': type_name,
