@@ -3,6 +3,7 @@
 import os
 import shutil
 import sys
+import traceback
 import getpass
 
 from waterlp.tasks import run_model
@@ -23,3 +24,5 @@ if __name__ == '__main__':
         run_model(args, logs_dir)
     except Exception as e:
         print(e, file=sys.stderr)
+
+        traceback.print_exc()

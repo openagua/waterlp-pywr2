@@ -74,17 +74,18 @@ def add_subblocks(self, values, attr_name):
 
 class WaterSystem(object):
 
-    def __init__(self, conn, name, network, all_scenarios, template, args, date_format='iso',
+    def __init__(self, name, network, all_scenarios, template, dimensions, args, date_format='iso',
                  session=None, reporter=None, scenario=None):
 
         self.storage = network.layout.get('storage')
         self.bucket_name = os.environ.get('AWS_S3_BUCKET')
 
-        self.conn = conn
+        # self.conn = conn
         self.session = session
         self.name = name
         self.scenario = scenario
         self.template = template
+        self.dimensions = dimensions
         self.reporter = reporter
         self.args = args
         self.date_format = date_format
@@ -119,10 +120,55 @@ class WaterSystem(object):
 
         self.log_dir = 'log/{run_name}'.format(run_name=self.args.run_name)
 
+        # dictionary to store resource attribute ids
+        self.resource_attributes = {}
+        self.res_attr_lookup = {}
+        self.raid_to_res_name = {}
+        self.attr_id_lookup = {}
+        self.tattr_lookup = {}
+        self.node_names = {}
+        self.tattrs = {}
+        self.types = {}
+
         ttypeattrs = {}
         rtypeattrs = {}
 
-        for tt in template.types:
+        # dictionary of units
+        self.units = {}
+
+        # Create resource attribute lookups
+        _ttypes = {tt.id: tt for tt in self.template.templatetypes}
+        def process_resource(resource_type, resource):
+            rtypes = [rt for rt in resource.types if rt.template_id == template.id]
+            if rtypes:
+                rtype = rtypes[0]
+            else:
+                return
+            ttype = _ttypes[rtype.id]
+            self.types[(resource_type, resource.id)] = {'id': ttype.id, 'name': ttype.name}
+            tattrs = {ta.attr_id: ta for ta in ttype.typeattrs}
+            for ra in resource.attributes:
+                if ra.attr_id in tattrs:
+                    key = (resource_type, resource.id, ra.attr_id)
+                    self.tattrs[key] = tattrs[ra.attr_id]
+
+                    # TODO: confirm the following doesn't overwrite attributes with a different dimension
+                    attr_name = ra.name.lower()
+                    human_readable_key = '%s/%s/%s' % (resource_type, resource.name, attr_name)
+                    self.tattr_lookup[human_readable_key] = tattrs[ra.attr_id]
+                    self.attr_id_lookup[resource_type, resource.id, attr_name] = ra.attr_id
+                    # resource attribute lookup
+                    self.res_attr_lookup[human_readable_key] = ra.id
+                    self.raid_to_res_name[ra.id] = resource.name
+
+        process_resource('network', self.network)
+        for node in self.network.nodes:
+            process_resource('node', node)
+        for link in self.network.links:
+            process_resource('link', link)
+
+        # Create template types lookup
+        for tt in template.templatetypes:
             resource_type = tt.resource_type.lower()  # i.e., node, link, network
             self.ttypes[(resource_type, tt['name'])] = []
 
@@ -132,6 +178,7 @@ class WaterSystem(object):
         # organize basic network information
         # features['networks'] = [network]
 
+        # Create more resource attribute lookups
         def get_resource_attributes(resource, resource_type):
             rtypes = [rt for rt in resource.types if rt.template_id == template.id]
             if not rtypes:
@@ -158,7 +205,7 @@ class WaterSystem(object):
                 tattr = tattrs[ra.attr_id]
                 self.res_tattrs[ra.id] = tattr
 
-                if tattr.is_var == 'Y' and tattr.properties.get('save', False):
+                if tattr.attr_is_var == 'Y' and tattr.properties.get('save', False):
                     self.attrs_to_save.append((resource_type, resource.id, tattr['attr_id']))
 
                 if ra.attr_is_var == 'N' and not args.suppress_input:
@@ -183,8 +230,8 @@ class WaterSystem(object):
         resource_type, resource_id, attr_id = key.split('/')
         resource_id = int(resource_id)
         attr_id = int(attr_id)
-        attr_name = self.conn.tattrs.get((resource_type, resource_id, attr_id), {}).get('attr_name',
-                                                                                        'unknown attribute')
+        attr_name = self.tattrs.get((resource_type, resource_id, attr_id), {}).get('attr_name',
+                                                                                   'unknown attribute')
         if resource_type == 'network':
             resource_name = self.network['name']
         else:
@@ -205,21 +252,21 @@ class WaterSystem(object):
         # initialize time steps and foresight periods
 
         time_settings = {
-            'start': self.scenario.start_time,
-            'end': self.scenario.end_time,
+            'start': dt.fromordinal(int(self.scenario.start_time)).isoformat(),
+            'end': dt.fromordinal(int(self.scenario.end_time)),
             'span': self.scenario.time_step,
         }
 
-        network_storage = self.conn.network.layout.get('storage')
+        network_storage = self.network.layout.get('storage')
 
-        if network_storage.location == 'AmazonS3':
-            network_folder = self.conn.network.layout.get('storage', {}).get('folder')
+        if network_storage['location'] == 'AmazonS3':
+            network_folder = self.network.layout.get('storage', {}).get('folder')
             files_path = network_folder
         else:
             files_path = None
 
         debug_ts = self.args.debug_ts if self.args.debug else None
-        self.evaluator = Evaluator(self.conn, time_settings=time_settings, files_path=files_path,
+        self.evaluator = Evaluator(time_settings=time_settings, files_path=files_path,
                                    date_format=self.date_format, debug_ts=debug_ts,
                                    debug_start=self.args.debug_start)
 
@@ -323,21 +370,21 @@ class WaterSystem(object):
 
             # get attr name
             attr_id = rs.attr_id
-            tattr = self.conn.tattrs[(resource_type, resource_id, attr_id)]
+            tattr = self.tattrs[(resource_type, resource_id, attr_id)]
             if not tattr:
                 continue
 
             # store the resource scenario value for future lookup
 
             intermediary = tattr['properties'].get('intermediary', False)
-            is_var = tattr['is_var'] == 'Y'
+            is_var = tattr['attr_is_var'] == 'Y'
 
             # non-intermediary outputs should not be pre-processed at all
             if is_var and not intermediary:
                 continue
 
             # load the metadata
-            metadata = json.loads(rs.value.metadata)
+            metadata = rs.value.metadata
 
             # identify as function or not
             input_method = metadata.get('input_method', 'native')
@@ -347,7 +394,7 @@ class WaterSystem(object):
             data_type = rs.value.type
 
             if data_type == 'descriptor':
-                continue # TODO: resolve this somehow
+                continue  # TODO: resolve this somehow
 
             # update data type
             self.res_tattrs[rs.resource_attr_id]['data_type'] = data_type
@@ -376,11 +423,11 @@ class WaterSystem(object):
                 continue
 
             # TODO: add generic unit conversion utility here
-            dimension = rs.value.dimension
+            attr_name = tattr.attr.name
             if resource_type == 'network':
-                res_attr_name = tattr['attr_name']
+                res_attr_name = attr_name
             else:
-                res_attr_name = '{}/{}/{}'.format(resource_type, resource['name'], tattr['attr_name'])
+                res_attr_name = '{}/{}/{}'.format(resource_type, resource['name'], attr_name)
 
             is_scalar = data_type == 'scalar' or type(value) in [int, float]
 
@@ -390,7 +437,7 @@ class WaterSystem(object):
                 except:
                     raise Exception("Could not convert scalar for {}".format(res_attr_name))
 
-            if (type_name.lower(), tattr['attr_name']) in INITIAL_STORAGE_ATTRS:
+            if (type_name.lower(), attr_name) in INITIAL_STORAGE_ATTRS:
                 self.initial_volumes[idx] = value
 
             elif is_scalar:
@@ -441,7 +488,7 @@ class WaterSystem(object):
                 self.parameters[idx] = {
                     'type': 'variable',
                     'value': {
-                        'name': '{}_{}'.format(tattr['attr_name'], rs['dataset_id']),
+                        'name': '{}_{}'.format(attr_name, rs['dataset_id']),
                         'data_type': data_type,
                         'value': values,
                     }
@@ -506,7 +553,7 @@ class WaterSystem(object):
         self.model = PywrModel(
             network=self.network,
             template=self.template,
-            tattrs=self.conn.tattrs,
+            tattrs=self.tattrs,
             start=start,
             end=end,
             step=step,
@@ -523,7 +570,7 @@ class WaterSystem(object):
         The result is a dictionary of all parameters for later use and extension.
         """
 
-        for ttype in self.template.types:
+        for ttype in self.template.templatetypes:
 
             resource_type = ttype['resource_type']
 
@@ -532,6 +579,8 @@ class WaterSystem(object):
 
             for tattr in ttype.typeattrs:
 
+                attr_name = tattr.attr.name
+
                 # data_type = tattr['data_type']
 
                 # create a unique parameter index
@@ -539,20 +588,23 @@ class WaterSystem(object):
                 type_name = ttype['name']
                 tattr_idx = (resource_type.lower(), type_name, attr_id)
                 if tattr_idx not in self.params:
-                    param = AttrDict(tattr)
-                    param.update(param.properties)
+                    param = {}
+                    param.update(tattr.attr)
+                    param.update(tattr.properties)
+                    dimension = self.dimensions.get(param['dimension_id'], {})
+                    units = {u['id']: u for u in dimension['units']}
                     param.update(
-                        scale=param.get('scale', 1),
-                        unit=param.get('unit'),
-                        intermediary=param.get('intermediary', False),
+                        dimension=dimension['name'],
+                        scale=tattr.properties.get('scale', 1),
+                        unit=units.get(tattr.unit_id, {}).get('abbreviation'),
+                        intermediary=tattr.properties.get('intermediary', False),
                         resource_type=resource_type.lower()
                     )
-                    del param['properties']
                     self.params[tattr_idx] = param
 
-                    if tattr['attr_name'] == 'Initial Storage':
-                        self.storage_scale = param.get('scale', 1)
-                        self.storage_unit = param.unit
+                    if attr_name == 'Initial Storage':
+                        self.storage_scale = param['scale']
+                        self.storage_unit = param['unit']
 
     def setup_subscenario(self, supersubscenario):
         """

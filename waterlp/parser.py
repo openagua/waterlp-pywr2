@@ -24,8 +24,6 @@ def commandline_parser():
     parser.add_argument('--pw', dest='hydra_password',
                         default=environ.get('HYDRA_PASSWORD'),
                         help='''The password for logging in to Hydra Server.''')
-    parser.add_argument('--sid', dest='session_id',
-                        help='''The Hydra Server session ID.''')
     parser.add_argument('--uid', dest='user_id', type=int,
                         help='''The Hydra Server user_id.''')
     parser.add_argument('--src', dest='source_id', type=int,
@@ -34,8 +32,10 @@ def commandline_parser():
                         help='''The network ID of the model to be run.''')
     parser.add_argument('--tid', dest='template_id', type=int,
                         help='''The template ID of the model to be run.''')
+    parser.add_argument('--scid', dest='scenario_id', type=int,
+                        help='''The IDs of the scenario to be run, if only one''')
     parser.add_argument('--scids', dest='scenario_ids',
-                        help='''The IDs of the scenarios to be run,
+                        help='''The IDs of the scenarios to be run, if more than one scenario,
                         specified as a string containing a comma-separated list of
                         integers or integer tuples.
                         ''')

@@ -48,6 +48,7 @@ oa_type_to_pywr = {
     'Hydropower (Piecewise)': 'PiecewiseLink',
     'Instream Flow Requirement': 'InstreamFlowRequirement',
     'Flood Control': 'InstreamFlowRequirement',
+    'Release Requirement': 'PiecewiseLink',
     'River': 'River',
     'Conveyance': 'Link',
     'Streamflow Gauge': 'RiverGauge',
@@ -298,7 +299,7 @@ class PywrModel(object):
         def process_param(pywr_node, resource_type, resource, ra):
             try:
                 res_attr_idx = (resource_type, resource['id'], ra['attr_id'])
-                attr_name = ra['attr_name']
+                attr_name = ra['name']
                 tattr = tattrs.get(res_attr_idx)
                 if not tattr:
                     return pywr_node

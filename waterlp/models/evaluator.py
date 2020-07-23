@@ -231,9 +231,8 @@ class EvalException(Exception):
 
 
 class Evaluator:
-    def __init__(self, conn=None, scenario_id=None, data_type='timeseries', nblocks=1, files_path=None,
+    def __init__(self, scenario_id=None, data_type='timeseries', nblocks=1, files_path=None,
                  time_settings=None, date_format='%Y-%m-%d %H:%M:%S', **kwargs):
-        self.conn = conn
 
         self.dates = []
         self.dates_as_string = []
@@ -287,7 +286,7 @@ class Evaluator:
         date_format = date_format or self.date_format
 
         # metadata = json.loads(resource_scenario.value.metadata)
-        metadata = json.loads(value.metadata)
+        metadata = value.metadata
         if func is None:
             func = metadata.get('function')
         use_function = metadata.get('use_function', 'N') == 'Y' or metadata.get('input_method') == 'function'

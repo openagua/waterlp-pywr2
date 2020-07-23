@@ -1,5 +1,6 @@
 from waterlp.utils.scenarios import create_subscenarios
 from datetime import datetime as dt
+from .hydra import Hydra
 
 statuses = {
     'start': 'started',
@@ -12,6 +13,7 @@ statuses = {
     'save': 'saving'
 }
 
+hydra = Hydra()
 
 class Scenario(object):
     def __init__(self, scenario_ids, conn, network, template, args, scenario_lookup):
@@ -66,7 +68,7 @@ class Scenario(object):
                 if parent_id in loaded_scenarios:
                     source = loaded_scenarios[parent_id]
                 else:
-                    source = conn.call('get_scenario', {'scenario_id': parent_id})
+                    source = conn.hydra.get_scenario(parent_id)
 
                 self.source_scenarios[source.id] = source
 
@@ -108,7 +110,7 @@ class Scenario(object):
         # ######################
 
         self.subscenarios = {
-            'options':  create_subscenarios(network, template, self.option, 'option'),
+            'options': create_subscenarios(network, template, self.option, 'option'),
             'scenarios': create_subscenarios(network, template, self.scenario, 'scenario'),
         }
 
@@ -124,25 +126,20 @@ class Scenario(object):
 
         result_scenario = scenario_lookup.get(results_scenario_name)
         if not result_scenario or result_scenario.id in self.source_ids:
-            result_scenario = conn.call(
-                'add_scenario',
-                {
-                    'network_id': network.id,
-                    'scen': {
-                        'id': None,
-                        'name': results_scenario_name,
-                        # 'cr_date': mod_date,
-                        'description': '',
-                        'network_id': network.id,
-                        'layout': {
-                            'class': 'results',
-                            'sources': self.base_ids,
-                            'value_tags': tags,
-                            'run': args.run_name,
-                        }
-                    }
+            scenario = dict(
+                id=None,
+                name=results_scenario_name,
+                # 'cr_date': mod_date,
+                description='',
+                network_id=network.id,
+                layout={
+                    'class': 'results',
+                    'sources': self.base_ids,
+                    'value_tags': tags,
+                    'run': args.run_name,
                 }
             )
+            result_scenario = conn.hydra.add_scenario(network.id, scenario)
 
         # where should results be saved?
         if self.variation_count == 0:
@@ -171,7 +168,7 @@ class Scenario(object):
             'value_tags': tags,
         })
 
-        result = conn.call('update_scenario', {'scen': result_scenario})
+        result = hydra.update_scenario(result_scenario)
 
         # write variation info to s3
 

@@ -1,5 +1,6 @@
 import os
 # import getpass
+import traceback
 from datetime import datetime
 from itertools import product
 from copy import copy, deepcopy
@@ -142,7 +143,14 @@ def run_scenarios(args, networklog):
     # ======================
     # connect to data server
     # ======================
-    all_scenario_ids = list(set(sum(args.scenario_ids, ())))
+    if not (args.scenario_id or args.scenario_ids):
+        raise Exception("No scenario ID(s) provided.")
+    if args.scenario_id:
+        scenario_ids = [(args.scenario_id, args.scenario_id)]
+        all_scenario_ids = [args.scenario_id]
+    else:
+        scenario_ids = args.scenario_ids
+        all_scenario_ids = list(set(sum(args.scenario_ids, ())))
 
     conn = connection(args=args, scenario_ids=all_scenario_ids)
 
@@ -155,11 +163,11 @@ def run_scenarios(args, networklog):
 
     # create the system
     base_system = WaterSystem(
-        conn=conn,
         name=args.app_name,
         all_scenarios=network.scenarios,
         network=conn.network,
         template=conn.template,
+        dimensions=conn.dimensions,
         date_format='%Y-%m-%d %H:%M:%S',
         args=args,
     )
@@ -169,14 +177,14 @@ def run_scenarios(args, networklog):
     # prepare the reporter
     post_reporter = PostReporter(args) if args.post_url else None
 
-    for scenario_ids in args.scenario_ids:
+    for scids in scenario_ids:
 
         try:
-            scenario_ids = list(scenario_ids)
+            _scids = list(scids)
         except:
-            scenario_ids = [scenario_ids]
+            _scids = [scids]
 
-        sid = '-'.join([args.unique_id] + [str(s) for s in set(scenario_ids)])
+        sid = '-'.join([args.unique_id] + [str(s) for s in set(_scids)])
 
         try:
             if local_redis and local_redis.get(sid) == ProcessState.CANCELED:
@@ -187,7 +195,7 @@ def run_scenarios(args, networklog):
             raise
 
         # create the scenario class
-        scenario = Scenario(scenario_ids=scenario_ids, conn=conn, network=conn.network, template=conn.template,
+        scenario = Scenario(scenario_ids=_scids, conn=conn, network=conn.network, template=conn.template,
                             args=args, scenario_lookup=base_system.scenarios)
 
         start_payload = scenario.update_payload(action='start')
@@ -323,6 +331,8 @@ def run_scenario(supersubscenario, args, verbose=False):
     except Exception as err:
 
         print(err)
+
+        traceback.print_exc()
 
         if reporter:
             reporter.report(action='error', message=str(err))
