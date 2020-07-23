@@ -1,9 +1,9 @@
 import os
 import json
-from attrdict import AttrDict
 import boto3
 from datetime import datetime as dt
 from tqdm import tqdm
+from loguru import logger
 
 from waterlp.models.pywr2 import PywrModel
 from waterlp.models.evaluator import Evaluator
@@ -338,7 +338,7 @@ class WaterSystem(object):
                 resource_scenarios[key] = rs
 
         # collect/evaluate source data
-        print("[*] Collecting source data")
+        logger.info("Collecting source data")
         cnt = 0
         # for source_id in self.scenario.source_ids:
 
@@ -346,7 +346,7 @@ class WaterSystem(object):
 
         # source = self.scenario.source_scenarios[source_id]
 
-        print("[*] Collecting data")
+        logger.info("Collecting data")
         for res_attr_idx in tqdm(resource_scenarios, ncols=80, disable=not self.args.verbose):
             rs = resource_scenarios[res_attr_idx]
             cnt += 1
@@ -425,9 +425,11 @@ class WaterSystem(object):
             # TODO: add generic unit conversion utility here
             attr_name = tattr.attr.name
             if resource_type == 'network':
-                res_attr_name = attr_name
+                param_name = attr_name
             else:
-                res_attr_name = '{}/{}/{}'.format(resource_type, resource['name'], attr_name)
+                # res_attr_name = '{}/{}/{}'.format(resource_type, resource['name'], attr_name)
+                # Note: this change assumes no nodes & links share the same name
+                param_name = '{}/{}'.format(resource['name'], attr_name)
 
             is_scalar = data_type == 'scalar' or type(value) in [int, float]
 
@@ -435,7 +437,7 @@ class WaterSystem(object):
                 try:
                     value = float(value)
                 except:
-                    raise Exception("Could not convert scalar for {}".format(res_attr_name))
+                    raise Exception("Could not convert scalar for {}".format(param_name))
 
             if (type_name.lower(), attr_name) in INITIAL_STORAGE_ATTRS:
                 self.initial_volumes[idx] = value
@@ -444,7 +446,7 @@ class WaterSystem(object):
                 self.parameters[idx] = {
                     'type': 'variable',
                     'value': {
-                        'name': res_attr_name,
+                        'name': param_name,
                         'pywr_type': 'constant',
                         'value': value
                     }
@@ -454,7 +456,7 @@ class WaterSystem(object):
                 self.parameters[idx] = {
                     'type': 'parameter',
                     'value': {
-                        'name': res_attr_name,
+                        'name': param_name,
                         'code': value
                     }
                 }
@@ -469,7 +471,7 @@ class WaterSystem(object):
                 self.parameters[idx] = {
                     'type': 'controlcurve',
                     'value': {
-                        'name': res_attr_name,
+                        'name': param_name,
                         'data': value
                     }
                 }
@@ -488,7 +490,7 @@ class WaterSystem(object):
                 self.parameters[idx] = {
                     'type': 'variable',
                     'value': {
-                        'name': '{}_{}'.format(attr_name, rs['dataset_id']),
+                        'name': '{}/{}'.format(attr_name, rs['dataset_id']),
                         'data_type': data_type,
                         'value': values,
                     }
@@ -654,7 +656,7 @@ class WaterSystem(object):
                 elif parameter and parameter['type'] == 'variable':
 
                     if not parameter.get('function'):  # functions will be handled by the evaluator
-                        self.parameter[res_attr_idx]['value']['values'] \
+                        self.parameters[res_attr_idx]['value']['values'] \
                             = perturb(self.variables[res_attr_idx]['value']['values'], variation)
 
                 else:  # we need to add the variable to account for the variation

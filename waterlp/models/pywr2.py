@@ -7,6 +7,8 @@ from tempfile import mkdtemp
 from shutil import rmtree, copytree
 import pandas
 
+from loguru import logger
+
 from pywr.core import Model
 
 from .utils import resource_name, create_policy, create_variable, create_control_curve
@@ -191,10 +193,11 @@ class PywrModel(object):
             try:
                 import_module(name, package)
             except Exception as err:
-                print(' [-] WARNING: {} could not be imported from {}'.format(name, package))
-                print('     Here\'s the real error:')
-                print(type(err))
-                print(err)
+                logger.warning("""{name} could not be imported from {package}
+                Here's the real error:
+                {error_type}
+                {err}
+                """.format(name=name, package=package, error_type=type(err), err=err))
 
         # Step 2: Load and run model
         self.model = Model.load(model_path, path=model_path)
@@ -351,7 +354,8 @@ class PywrModel(object):
 
         # create node dictionaries by name and id
         for node in network['nodes']:
-            pywr_name = resource_name(node['name'], 'node')
+            # pywr_name = resource_name(node['name'], 'node')
+            pywr_name = node['name']
             types = [t for t in node['types'] if t['template_id'] == template['id']]
             if not types:
                 continue
@@ -383,7 +387,8 @@ class PywrModel(object):
         link_lookup = {}
         for link in network['links']:
             try:
-                pywr_name = resource_name(link['name'], 'link')
+                # pywr_name = resource_name(link['name'], 'link')
+                pywr_name = link['name']
                 types = [t for t in link['types'] if t['template_id'] == template['id']]
                 if not types:
                     continue

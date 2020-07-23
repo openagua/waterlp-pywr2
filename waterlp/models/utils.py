@@ -1,3 +1,4 @@
+
 import re
 
 
@@ -16,8 +17,10 @@ spaces = '\n' + ' ' * 8
 default_value_code = 'self._value(timestep, scenario_index)'
 value_code_template = 'convert({value}, "{unit1}", "{unit2}", scale_in={scale_in}, scale_out={scale_out})'
 
-policy_code_template = """from parameters import WaterLPParameter
-
+# policy_code_template = """
+# from loguru import logger
+policy_code_template = """
+from parameters import WaterLPParameter
 from utilities.converter import convert
 
 class {policy_name}(WaterLPParameter):
@@ -35,8 +38,10 @@ class {policy_name}(WaterLPParameter):
         return cls(model, **data)
         
 {policy_name}.register()
-print(" [*] {policy_name} successfully registered")
 """
+
+# logger.debug(" [*] {policy_name} successfully registered")
+# """
 
 
 def parse_code(policy_name, user_code, res_attr_lookup, tattr, description=''):
@@ -106,7 +111,7 @@ def parse_code(policy_name, user_code, res_attr_lookup, tattr, description=''):
         policy_name=policy_name,
         policy_description=description,
         policy_code=new_code,
-        value_code = value_code,
+        value_code=value_code,
         kwargs='kwargs = dict(timestep=timestep, scenario_index=scenario_index)' if '**kwargs' in user_code else ''
     )
 

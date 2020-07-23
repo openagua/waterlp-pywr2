@@ -1,3 +1,5 @@
+from loguru import logger
+
 try:
     import os
     import redis
@@ -6,5 +8,5 @@ try:
     local_redis.get('test')
 
 except:
-    print('[x] WARNING: Redis not available.')
+    logger.warning('Redis not available.')
     local_redis = None

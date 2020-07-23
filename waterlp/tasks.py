@@ -6,6 +6,7 @@ from itertools import product
 from copy import copy, deepcopy
 from ast import literal_eval
 from tqdm import tqdm
+from loguru import logger
 
 import pandas as pd
 
@@ -85,7 +86,7 @@ def run_model(args, logs_dir, **kwargs):
         args.log_dir = 'network-{}'.format(args.network_id)
     args.log_dir = os.path.join(logs_dir, args.log_dir)
 
-    print('[*] Running "{}" with {}'.format(args.run_name, args))
+    logger.info('Running "{}" with {}'.format(args.run_name, args))
 
     # specify scenarios log dir
     args.scenario_log_dir = 'scenario_logs'
@@ -128,17 +129,11 @@ def run_scenarios(args, networklog):
 
     print('')
     if args.debug:
-        print("DEBUG ON")
-    else:
-        print("DEBUG OFF")
+        logger.debug("RUNNING IN DEBUG MODE")
 
     args.starttime = datetime.now()  # args.start_time is iso-formatted, but this is still probably redundant
 
-    if args.debug:
-        print("================================================")
-        print("STARTING RUN")
-        print("Start time: {}".format(args.starttime.isoformat()))
-        print("================================================")
+    logger.debug("STARTING RUN")
 
     # ======================
     # connect to data server
@@ -287,7 +282,7 @@ def run_scenarios(args, networklog):
 
 @app.task()
 def run_scenario(supersubscenario, args, verbose=False):
-    print("[*] Running scenario {}".format(supersubscenario['id']))
+    logger.info("Running scenario {}".format(supersubscenario['id']))
 
     # Check OA to see if the model request is still valid
     sid = supersubscenario.get('sid')
